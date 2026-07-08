@@ -1,0 +1,78 @@
+There are **2 parts** to this — expand in ESXi first, then grow the partition inside the VM.
+
+---
+
+## Part 1 — Expand the Disk in ESXi Web UI
+
+> ⚠️ **VM must be powered OFF before resizing the disk**
+
+1. In the ESXi web UI, **right-click your VM → Edit Settings**
+2. Click on **Hard disk 1** (currently 20 GB)
+3. Change the size field to **40 GB** (recommended for the upgrade)
+4. Click **Save**
+5. **Power the VM back on**
+
+---
+
+## Part 2 — Extend the Partition & Filesystem Inside the VM
+
+After booting, SSH in or open the console and run:
+
+### Step 1 — Check current layout
+
+```bash
+lsblk
+```
+
+You'll see something like:
+```
+NAME        MAJ:MIN  SIZE  MOUNTPOINT
+sda           8:0    40G          ← disk is now 40G
+├─sda1        8:1     1G  /boot
+└─sda2        8:2    19G
+  ├─rhel-root 253:0  17G  /
+  └─rhel-swap 253:1   2G  [SWAP]
+```
+
+### Step 2 — Grow the partition
+
+```bash
+# Install growpart if not present
+sudo dnf install -y cloud-utils-growpart
+
+# Extend sda2 (the LVM partition) to use new space
+sudo growpart /dev/sda 2
+```
+
+### Step 3 — Extend the LVM Physical Volume
+
+```bash
+sudo pvresize /dev/sda2
+```
+
+### Step 4 — Extend the Logical Volume
+
+```bash
+# Extend root LV using all free space
+sudo lvextend -l +100%FREE /dev/rhel/root
+```
+
+### Step 5 — Grow the filesystem (XFS is default on RHEL)
+
+```bash
+sudo xfs_growfs /
+```
+
+### Step 6 — Verify
+
+```bash
+df -h /
+```
+
+You should now see the full expanded size available on `/`.
+
+---
+
+## If your disk uses a different layout
+
+Run `lsblk` and share the output — the partition names might differ slightly (e.g., `/dev/mapper/rhel-root` or `/dev/nvme0n1`). I can give you the exact commands for your specific layout.

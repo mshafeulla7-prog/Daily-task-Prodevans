@@ -1,0 +1,97 @@
+Let's go through Step 2 (download) and beyond in full detail.
+
+**Step 2: Download the ESXi installer ISO**
+
+1. Open a browser and go to **support.broadcom.com**.
+
+2. If you don't have an account, click **Register** and create one. You'll need a valid email; Broadcom sends a verification link. Note: a few people have reported account creation issues if their name contains accented characters — if that happens, try without special characters or use a slight variation, then contact Broadcom support to fix it later.
+
+3. Once registered, log in to the portal.
+
+4. Look for **My Downloads** in the top navigation or account menu.
+
+5. On the downloads page, you should see a box or banner that says something like **"Free Software Downloads available HERE"** — click it. This is the section that hosts the no-license-required software, separate from the paid product catalog.
+
+6. In the search bar, type **"VMware vSphere Hypervisor"** (this is the official name for free ESXi, not "ESXi" directly — searching just "ESXi" may take you to the paid vSphere product line instead).
+
+7. You should see an entry for **ESXi 8.0 Update 3e** (the current free release). Click on it to expand the version/download options.
+
+8. You'll be asked to **accept the Terms and Conditions** (a checkbox). Check it.
+
+9. Click the **Download** button next to the ISO file. The file will be named something like `VMware-VMvisor-Installer-8.0U3e-xxxxxxx.x86_64.iso`. It's roughly 350-500MB, so it'll download quickly on most connections.
+
+10. Once downloaded, it's good practice to verify the file isn't corrupted — Broadcom usually lists a SHA256 checksum next to the download link. On Windows you can check it via PowerShell with `Get-FileHash filename.iso -Algorithm SHA256`, and on Mac/Linux with `shasum -a 256 filename.iso`. Compare the output to what's listed on the portal.
+
+**Step 3: Create a bootable USB drive from the ISO**
+
+1. Get a USB drive with at least 8GB capacity. Back up anything on it first — this process will erase it completely.
+
+2. Download a USB-writing tool:
+   - **Rufus** (Windows only) from rufus.ie — this is the most commonly used tool for ESXi specifically.
+   - **balenaEtcher** (Windows/Mac/Linux) from balena.io/etcher if you're not on Windows.
+
+3. Plug in your USB drive.
+
+4. Open Rufus (or Etcher):
+   - In Rufus: under "Device," select your USB drive (double-check you've picked the right one — it'll be wiped). Under "Boot selection," click **SELECT** and choose the ESXi ISO you downloaded. Leave partition scheme as **GPT** and target system as **UEFI** (or MBR/BIOS if your machine is older and doesn't support UEFI boot). Click **START**. Rufus may prompt about writing in ISO mode — choose that option since ESXi needs the structure preserved exactly.
+   - In Etcher: click "Flash from file," select the ISO, select your USB target, and click "Flash."
+
+5. Wait for the write and verification process to finish (usually 5-10 minutes depending on USB speed). Don't remove the drive until it says complete.
+
+**Step 4: Boot the target machine from USB and install ESXi**
+
+1. Plug the USB drive into the machine you're installing ESXi on.
+
+2. Power it on and immediately start pressing the key that opens the boot menu or BIOS/UEFI setup — this is usually **F2, F10, F12, Del, or Esc** depending on the motherboard brand (check your manual or the splash screen if it flashes).
+
+3. In BIOS/UEFI settings, confirm:
+   - **Intel VT-x / AMD-V (virtualization)** is enabled — look under CPU configuration or "Advanced" settings.
+   - **Secure Boot** is disabled, if present — ESXi can work with it on in some versions, but disabling avoids common boot failures, especially with unsigned community drivers.
+   - Boot order is set to prioritize the USB drive, or use the one-time boot menu to select it directly.
+
+4. Save settings and reboot. The machine should now boot into the ESXi installer from USB.
+
+5. You'll see a black screen with the ESXi loading bar, followed by the installer welcome screen. Press **Enter** to continue.
+
+6. Press **F11** to accept the End User License Agreement (EULA).
+
+7. The installer scans your hardware and lists available disks. Select your **500GB disk** as the install target, then press **Enter**.
+   - If you see a warning about existing data/partitions on the disk, and you're fine wiping it, proceed.
+
+8. Choose your keyboard layout (default is usually fine for US layouts) and press Enter.
+
+9. Set a **root password**. This is critical — write it down somewhere safe, since there's no password reset built into ESXi without console/physical access tricks. It needs to meet complexity requirements (the installer will tell you if it's too weak).
+
+10. Confirm the install by pressing **F11** on the final confirmation screen. The installer will now format the disk and copy ESXi files — this usually takes 3-5 minutes.
+
+11. When it says "Installation Complete," remove the USB drive, then press **Enter** to reboot.
+
+**Step 5: First boot and management network setup**
+
+1. After reboot, you'll land on the **Direct Console User Interface (DCUI)** — a grey/yellow text-based screen showing the hostname, IP address (likely DHCP-assigned at this point), and some system info.
+
+2. Press **F2** to customize the system, and log in with **root** and the password you set.
+
+3. Navigate to **Configure Management Network**.
+
+4. If you have multiple NICs, go to **Network Adapters** to confirm which one is being used — pick the one that's actually plugged into your network.
+
+5. Go to **IPv4 Configuration**. You can leave it on DHCP for now, or set a static IP (recommended for a host you'll be managing long-term, so its address doesn't change after a router reboot). If setting static, you'll need IP address, subnet mask, and default gateway.
+
+6. Optionally configure **DNS Configuration** (hostname, primary/secondary DNS) if you want clean name resolution.
+
+7. Press **Esc** to exit, then **Y** to confirm and apply the changes — this restarts the management network briefly.
+
+8. Back on the main DCUI screen, you should now see the IP address listed under "Management Network."
+
+**Step 6: Access ESXi from another machine**
+
+1. From any computer on the same network, open a browser and go to `https://<the-ip-address-shown-on-DCUI>/`.
+
+2. You'll likely get a certificate warning (ESXi uses a self-signed cert by default) — click through to proceed (e.g., "Advanced" → "Proceed anyway" in Chrome).
+
+3. You'll land on the **vSphere Host Client** login page. Log in with username **root** and the password you set during install.
+
+4. You're now in the ESXi management UI, where you can create virtual switches, upload ISO images for guest OSes (under the Datastore browser), and create new VMs.
+
+Once you're at this point, let me know if you'd like a walkthrough on creating your first VM, setting up virtual networking, or uploading ISOs into the datastore — happy to go step by step on any of those next.

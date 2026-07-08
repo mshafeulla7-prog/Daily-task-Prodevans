@@ -1,0 +1,10 @@
+Hypervisor allows us to run multiple os on the same hardware,The each OS belivies that they had occupied the whole hardware,but in reality the hypervisor had made the partitions in this to run multiple os on the same hardware.
+Advantage:
+1.Each OS bearly use 10-15 % of memory with the help of Hypervisor we can use all the memory.
+2.If we wanted to run an new os within a fraction of seconds we can spin up an new OS.
+3.If there is any problem into the new version of the OS we can easily shift to the older version.
+
+There are two types of hypervisors:
+1.Bare metal hypervisors: This are the HV that are directly installed on the physical hardware of the computer .They are incredibly fast and is used to power data centers.
+2.Hosted :This are the hypervisors that we install on our systems .
+eg: Oracle virtualbox,vmware workstation and parallel desktop .
